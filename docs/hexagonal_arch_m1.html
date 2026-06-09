@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arquitectura Hexagonal · m1-fintech-cli</title>
+<style>
+  :root {
+    --bg: #0a0c10; --surface: #111318; --surface2: #181c24;
+    --border: #1e2330; --text: #e8eaf0; --muted: #6b7280; --muted2: #9ca3af;
+    --green: #10B981; --purple: #818CF8; --amber: #F59E0B; --slate: #94A3B8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', 'Fira Mono', monospace; padding: 32px 24px 48px; }
+  h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+  .layers { display: flex; flex-direction: column; gap: 0; }
+
+  .layer { display: flex; align-items: stretch; }
+  .layer-label {
+    width: 120px; min-width: 120px; display: flex; align-items: center;
+    justify-content: flex-end; padding-right: 14px; font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    border-right: 2px solid var(--border);
+  }
+  .layer-content { flex: 1; padding: 12px 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+  .l-domain .layer-label  { color: var(--green);  border-color: var(--green); }
+  .l-app .layer-label     { color: var(--purple); border-color: var(--purple); }
+  .l-infra .layer-label   { color: var(--amber);  border-color: var(--amber); }
+  .l-main .layer-label    { color: var(--slate);  border-color: var(--slate); }
+
+  .card { border-radius: 8px; padding: 10px 14px; border: 1.5px solid; min-width: 170px; max-width: 220px; }
+  .card-name { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+  .card-file { font-size: 10px; opacity: 0.55; margin-bottom: 5px; }
+  .card-desc { font-size: 10.5px; line-height: 1.55; opacity: 0.75; }
+
+  .c-domain { background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.3); }
+  .c-domain .card-name { color: var(--green); }
+  .c-port   { background: rgba(129,140,248,0.07); border-color: rgba(129,140,248,0.3); }
+  .c-port .card-name { color: var(--purple); }
+  .c-usecase { background: rgba(129,140,248,0.07); border-color: rgba(129,140,248,0.3); }
+  .c-usecase .card-name { color: var(--purple); }
+  .c-infra  { background: rgba(245,158,11,0.07); border-color: rgba(245,158,11,0.3); }
+  .c-infra .card-name { color: var(--amber); }
+  .c-future { background: transparent; border-color: var(--border); border-style: dashed; opacity: 0.4; }
+  .c-future .card-name { color: var(--muted2); }
+  .c-main   { background: rgba(148,163,184,0.07); border-color: rgba(148,163,184,0.3); }
+  .c-main .card-name { color: var(--slate); }
+
+  .arrow-row { display: flex; align-items: center; padding: 4px 0 4px 134px; }
+  .arrow { font-size: 15px; color: var(--muted); }
+  .arrow-label { font-size: 9.5px; color: var(--muted); margin-left: 10px; letter-spacing: 0.05em; }
+
+  .section { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 32px 0 12px; }
+
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
+  .fb { font-size: 11px; padding: 5px 10px; border-radius: 5px; border: 1px solid; white-space: nowrap; }
+  .fb-domain  { background: rgba(16,185,129,0.1);  border-color: rgba(16,185,129,0.4);  color: var(--green); }
+  .fb-app     { background: rgba(129,140,248,0.1); border-color: rgba(129,140,248,0.4); color: var(--purple); }
+  .fb-infra   { background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.4);  color: var(--amber); }
+  .fb-main    { background: rgba(148,163,184,0.1); border-color: rgba(148,163,184,0.4); color: var(--slate); }
+  .fa { font-size: 14px; color: var(--muted); }
+
+  .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+  .rule { font-size: 11px; padding: 9px 12px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); color: var(--muted2); line-height: 1.55; }
+  .rule b { color: var(--text); }
+
+  .note { padding: 12px 16px; border-radius: 8px; background: rgba(129,140,248,0.05); border: 1px solid rgba(129,140,248,0.2); font-size: 11px; color: var(--muted2); line-height: 1.65; }
+  .note b { color: var(--purple); }
+
+  .sublabel { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px; }
+  .layer-group { display: flex; flex-direction: column; }
+  .group-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--purple); background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.2); border-radius: 4px; padding: 2px 7px; margin-bottom: 6px; display: inline-block; }
+</style>
+</head>
+<body>
+<h2>Arquitectura Hexagonal · m1-fintech-cli · Estado actual</h2>
+
+<div class="layers">
+
+  <!-- DOMAIN -->
+  <div class="layer l-domain">
+    <div class="layer-label">Domain</div>
+    <div class="layer-content">
+      <div class="card c-domain">
+        <div class="card-name">Transaction</div>
+        <div class="card-file">domain/models.py</div>
+        <div class="card-desc">Entidad central. Reglas de negocio puras.<br>is_valid() → amount &gt; 0, id no vacío, currency == 3 chars.<br>No sabe nada del exterior.</div>
+      </div>
+      <div class="card c-domain">
+        <div class="card-name">InvalidTransactionError</div>
+        <div class="card-file">domain/exceptions.py</div>
+        <div class="card-desc">Excepción de dominio.<br>Se lanza cuando una transacción no cumple las reglas de negocio.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><span class="arrow">↓</span><span class="arrow-label">application importa domain — nunca al revés</span></div>
+
+  <!-- APPLICATION: PORTS -->
+  <div class="layer l-app">
+    <div class="layer-label">Ports</div>
+    <div class="layer-content">
+      <div class="card c-port">
+        <div class="card-name">TransactionValidatorPort</div>
+        <div class="card-file">application/ports/transaction_validator.py</div>
+        <div class="card-desc">Contrato abstracto (ABC).<br>Define validate(txn) → bool.<br>No sabe quién lo implementa.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><span class="arrow">↓</span><span class="arrow-label">use_case depende del puerto — no de la implementación</span></div>
+
+  <!-- APPLICATION: USE CASES -->
+  <div class="layer l-app">
+    <div class="layer-label">Use Cases</div>
+    <div class="layer-content">
+      <div class="card c-usecase">
+        <div class="card-name">ValidateTransactionUseCase</div>
+        <div class="card-file">application/use_cases/validate_transaction.py</div>
+        <div class="card-desc">Recibe el puerto por inyección de dependencias.<br>execute(txn) → True o lanza InvalidTransactionError.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><span class="arrow">↓</span><span class="arrow-label">infrastructure implementa el contrato del puerto</span></div>
+
+  <!-- INFRASTRUCTURE -->
+  <div class="layer l-infra">
+    <div class="layer-label">Infrastructure</div>
+    <div class="layer-content">
+      <div class="card c-infra">
+        <div class="card-name">TransactionValidatorImpl</div>
+        <div class="card-file">infrastructure/transaction_validator_impl.py</div>
+        <div class="card-desc">Adaptador concreto.<br>Implementa el puerto usando transaction.is_valid().</div>
+      </div>
+      <div class="card c-future">
+        <div class="card-name">[ FastAPI ] M4</div>
+        <div class="card-file">infrastructure/api/</div>
+        <div class="card-desc">Adaptador de entrada.<br>Mes 4.</div>
+      </div>
+      <div class="card c-future">
+        <div class="card-name">[ LLM Client ] M4</div>
+        <div class="card-file">infrastructure/llm/</div>
+        <div class="card-desc">Adaptador de salida.<br>Anthropic SDK — Mes 4.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><span class="arrow">↓</span><span class="arrow-label">main cablea todo — único punto de composición</span></div>
+
+  <!-- MAIN -->
+  <div class="layer l-main">
+    <div class="layer-label">Main</div>
+    <div class="layer-content">
+      <div class="card c-main">
+        <div class="card-name">main.py</div>
+        <div class="card-file">composition root</div>
+        <div class="card-desc">Instancia ValidatorImpl, lo inyecta en UseCase y ejecuta.<br>Único lugar que conoce todas las capas.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FLUJO -->
+<div class="section">Flujo de ejecución — llamada real</div>
+<div class="flow">
+  <span class="fb fb-main">main.py</span>
+  <span class="fa">→</span>
+  <span class="fb fb-infra">TransactionValidatorImpl</span>
+  <span class="fa">→</span>
+  <span class="fb fb-app">ValidateTransactionUseCase</span>
+  <span class="fa">→</span>
+  <span class="fb fb-app">TransactionValidatorPort</span>
+  <span class="fa">→</span>
+  <span class="fb fb-domain">Transaction.is_valid()</span>
+  <span class="fa">→</span>
+  <span class="fb fb-domain">True / Exception</span>
+</div>
+
+<!-- REGLAS -->
+<div class="section">Reglas de dependencia</div>
+<div class="rules">
+  <div class="rule"><b>Domain</b> — no importa nada del proyecto. Solo Python stdlib. Es el núcleo estable.</div>
+  <div class="rule"><b>Application</b> — importa domain. Nunca importa infrastructure directamente.</div>
+  <div class="rule"><b>Infrastructure</b> — implementa puertos. Puede usar libs externas (FastAPI, Anthropic, DB).</div>
+  <div class="rule"><b>main.py</b> — único archivo que conoce todas las capas. Cablea sin lógica de negocio.</div>
+</div>
+
+<!-- NOTA TESTS -->
+<div class="note">
+  <b>¿Por qué los tests pasan sin infrastructure real?</b><br>
+  Los mocks en <code>tests/unit/</code> implementan <code>TransactionValidatorPort</code> igual que <code>TransactionValidatorImpl</code>. El use_case recibe el puerto por inyección — no sabe si es mock o real. Eso es inversión de dependencias en acción: el dominio y la lógica son testeables en total aislamiento.
+</div>
+
+</body>
+</html>
