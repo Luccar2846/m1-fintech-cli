@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+CURRENCY_CODE_LENGTH = 3
+
 
 @dataclass
 class Transaction:
@@ -14,5 +16,5 @@ class Transaction:
         return (
             len(self.id) > 0
             and self.amount > 0
-            and len(self.currency) == 3
+            and len(self.currency) == CURRENCY_CODE_LENGTH
         )
