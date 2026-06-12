@@ -16,4 +16,6 @@ wheels/
 data/raw/
 data/processed/
 *.csv
-*.zip.ipynb_checkpoints/
+*.zip
+.ipynb_checkpoints/
+notebooks/
