@@ -11,3 +11,9 @@ wheels/
 .env
 .coverage
 .pytest_cache/
+
+# Data — nunca en git
+data/raw/
+data/processed/
+*.csv
+*.zip.ipynb_checkpoints/
