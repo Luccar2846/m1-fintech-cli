@@ -18,4 +18,4 @@ data/processed/
 *.csv
 *.zip
 .ipynb_checkpoints/
-notebooks/
+
